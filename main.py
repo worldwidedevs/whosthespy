@@ -16,17 +16,33 @@ DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
 slash = SlashCommand(bot)
 
+global_spy = None
+thumbs_up = 1
+thumbs_down = 1
 
 @bot.command(aliases=["start", "startgame", "play"], pass_context=True)
 async def start_game(ctx, wait: typing.Optional[int] = None):
+    global global_spy
+    global thumbs_up
+    global thumbs_down
+
     locations = [
         ["Restaurant","Barkeeper","Guest","Waiter","Chef","Gourmet"],
         ["Casino","Groupier","Kunde","Escord Lady","Manager","Receptionist"], 
-        ["Strand","Thief","Icecream Seller","Tourist","Lifeguard"], 
+        ["Beach","Thief","Icecream Seller","Tourist","Lifeguard"], 
         ["Luxury Yacht","Passanger","Captain","Cook","Cleaning Crew Member","Receptionist"],
         ["Submarine","Captain","Sailor","Security Guard","Weapons Manager","Cook"]
     ]
     
+    text = "The possible locations are:\n"
+    for location in locations:
+        if locations.index(location) == len(locations)-1:
+            location = location[0]
+            text = text + location + "."
+        else:
+            location = location[0]
+            text = text + location + ", "
+
     # Members assignen
     author = ctx.author
     try:
@@ -42,6 +58,12 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     if member_count > 10:
         await ctx.send("The maximum amount of players is 10.")
         return
+    # -------------------------------
+    # OVERRIDDEN FOR TESTING PURPOSES
+    # REMOVE IN PRODUCTION
+    # -------------------------------
+    #elif member_count < 4:
+    #    await ctx.send("The minimum amount of players is 4.")
     
     # Rollen + Locations randomizen (spy etc)
     roleset = random.choice(locations)
@@ -51,35 +73,98 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
 
     # Direct messages to members
     for member in voice_members:
-        if voice_members.index(member) == spy:
-            channel = await member.create_dm()
-            await channel.send("Your role is: **Spy** \nGuess the location!")
-        else:
-            role = random.choice(roleset)
-            roleset.remove(role)
-            channel = await member.create_dm()
-            await channel.send(f"Your role is: **{role}** \nYour location is: **{location}**")
+        try:
+            if voice_members.index(member) == spy:
+                channel = await member.create_dm()
+                global_spy = member
+                await channel.send(f"Your role is: **Spy** \nGuess the location! {text}")
+            else:
+                role = random.choice(roleset)
+                roleset.remove(role)
+                channel = await member.create_dm()
+                await channel.send(f"Your role is: **{role}** \nYour location is: **{location}**")
+        except:
+            await ctx.send("The DM couldn't be sent to everyone. Check if someone blocked the bot.")
+            return
         
-    sleep(15)
-    await ctx.send(f"**The game starts now!** We're starting with: {random.choice(voice_members).mention}. Ask someone a question!")
-
     if wait != None:
         sleep(wait)
     else:
         sleep(10)
-
     
-        
-        
+    await ctx.send(f"**The game starts now!** We're starting with: {random.choice(voice_members).mention}. Ask someone a question!")
 
 
+    @bot.command()
+    async def vote(ctx):
+        global global_spy
+        global thumbs_up
+        global thumbs_down
 
-'''
-@bot.commands(aliases=["thespyis"], pass_context=True)
-async def guess(ctx):
-    user = ctx.message.mentions[0]
-    await ctx.send(f"{user.mention} wurde angeklagt. Bitte reacten.")
-    # bei member_count reactions die Rolle des Angeklagten überprüfen
-'''
+        mentioned = ctx.message.mentions[0]
+
+        #try:
+        #    if global_spy == None:
+        #        await ctx.send("You haven't started any games yet.")
+        #except:
+        #    await ctx.send("You haven't started any games yet.")
+
+        voting = await ctx.send(f"{ctx.author.mention} voted for {mentioned.mention}. You have 10 seconds to react with 👍 or 👎.")
+        await voting.add_reaction("👍")
+        await voting.add_reaction("👎")
+
+        thumbs_up = 1
+        thumbs_down = 1
+
+        # -------------------------------
+        # OVERRIDDEN FOR TESTING PURPOSES
+        # REMOVE IN PRODUCTION
+        # -------------------------------
+        #sleep(30)
+
+        voting = await ctx.channel.fetch_message(voting.id)
+        # reactions = voting.reactions
+        # print(reactions)
+        # print(f"voting reaction users: {voting.reactions.users}")
+
+        @bot.event
+        async def on_reaction_add(reaction, user):
+            global thumbs_up
+            global thumbs_down
+
+            if user.id == mentioned.id:
+                return
+            if reaction.message.id != voting.id:
+                return
+            elif reaction.emoji == "👍":
+                thumbs_up += 1
+                print(f"thumbs_up: {thumbs_up}")
+            elif reaction.emoji == "👎":
+                thumbs_down += 1
+                print(f"thumbs_down: {thumbs_down}")
+            
+            if thumbs_down >= 2:
+                await ctx.send("Voting failed.")
+                await voting.delete()
+                thumbs_down = 1
+            elif thumbs_up >= member_count:
+                if mentioned.id == global_spy.id:
+                    await ctx.send(f"{global_spy.mention} was the spy!\nThe Crew wins!")
+                    thumbs_up = 1
+                    await voting.delete()
+                    return
+                else:
+                    await ctx.send(f"{mentioned.mention} was not the spy! The real spy was {global_spy.mention}.")
+                    thumbs_up = 1
+                    await voting.delete()
+                    return
+
+        thumbs_up = 1
+        thumbs_down = 1
+        print(f"thumbs_up: {thumbs_up}")
+        print(f"thumbs_down: {thumbs_down}")
+        print(f"member_count: {member_count}")
+        return
+
 
 bot.run(DISCORD_TOKEN)
