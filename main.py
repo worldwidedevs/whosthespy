@@ -23,7 +23,20 @@ game_running = False
 
 @bot.event
 async def on_ready():
-    print("Bot ready!")
+    guild_count = 0
+  
+    print("Logged in as")
+    print(bot.user.name)
+    print(bot.user.id)
+    print("------")
+    
+    for guild in bot.guilds:
+        print("{0} : {1}".format(guild.id, guild.name))
+        guild_count = guild_count + 1
+    
+    await bot.change_presence(activity=discord.Game(name=f"on {guild_count} servers | -help"))
+    
+    print("Bot is in " + str(guild_count) + " guilds")
 
 @bot.command(aliases=["start", "startgame", "play"], pass_context=True)
 async def start_game(ctx, wait: typing.Optional[int] = None):
