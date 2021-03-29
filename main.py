@@ -13,7 +13,7 @@ import typing
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
-bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
+bot = commands.Bot(command_prefix="-", intents=discord.Intents.all())
 slash = SlashCommand(bot)
 
 global_spy = None
@@ -38,7 +38,7 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
 
     locations = [
         ["Restaurant","https://i.ibb.co/0qkC1Zm/restaurant-wts.jpg","Barkeeper","Guest","Waiter","Chef","Gourmet/Tester",""],
-        ["Casino","https://i.ibb.co/7r4DZzR/casino-wts.jpg","Groupier","Kunde","Escord Lady","Manager","Receptionist","Ferrari Owner who just wants to flex"],
+        ["Casino","https://i.ibb.co/7r4DZzR/casino-wts.jpg","Groupier","Customer","Escord Lady","Manager","Receptionist","Ferrari Owner who just wants to flex"],
         ["Beach","https://i.ibb.co/j645RYh/beach-wts.jpg","Thief","Icecream Seller","Tourist","Lifeguard","Surfteacher",""], 
         ["Luxury Yacht","https://i.ibb.co/3YqN28b/yacht-wts.jpg","Passanger","Captain","Cook","Cleaning Crew Member","Receptionist",""],
         ["Submarine","https://i.ibb.co/rvmhDGv/submarine-wts.jpg","Captain","Sailor","Security Guard","Weapons Manager","Cook",""],
