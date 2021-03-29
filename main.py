@@ -19,6 +19,7 @@ slash = SlashCommand(bot)
 global_spy = None
 thumbs_up = 1
 thumbs_down = 1
+game_running = False
 
 @bot.event
 async def on_ready():
@@ -29,6 +30,11 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     global global_spy
     global thumbs_up
     global thumbs_down
+    global game_running
+
+    if game_running == True:
+      return
+    game_running = True
 
     locations = [
         ["Restaurant","https://i.ibb.co/0qkC1Zm/restaurant-wts.jpg","Barkeeper","Guest","Waiter","Chef","Gourmet/Tester",""],
@@ -63,8 +69,8 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     if member_count > 10:
         await ctx.send("The maximum amount of players is 10.")
         return
-    #elif member_count < 4:
-    #    await ctx.send("The minimum amount of players is 4.")
+    elif member_count < 4:
+        await ctx.send("The minimum amount of players is 4.")
     
     # Rollen + Locations randomizen (spy etc)
     roleset = random.choice(locations)
@@ -84,7 +90,7 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
                 embed.add_field(name="Location", value="Find it out", inline=True)
                 embed.add_field(name="Role", value="Spy", inline=True)
                 embed.add_field(name="Possible locations", value=text, inline=False)
-                embed.set_footer(text="Guess the right location to win!")
+                embed.set_footer(text="Type .guess [location] in the server channel where you started the game to guess the location.")
                 await channel.send(embed=embed)
             else:
                 role = random.choice(roleset)
@@ -113,6 +119,10 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
         global global_spy
         global thumbs_up
         global thumbs_down
+        global game_running
+
+        if game_running == False:
+          return
 
         mentioned = ctx.message.mentions[0]
 
@@ -129,6 +139,10 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
         async def on_reaction_add(reaction, user):
             global thumbs_up
             global thumbs_down
+            global game_running
+
+            if game_running == False:
+                return
 
             if user.id == mentioned.id:
                 return
@@ -150,11 +164,13 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
                     await ctx.send(f"{global_spy.mention} was the spy!\nThe Crew wins!")
                     thumbs_up = 1
                     await voting.delete()
+                    game_running = False
                     return
                 else:
                     await ctx.send(f"{mentioned.mention} was not the spy! The real spy was {global_spy.mention}.")
                     thumbs_up = 1
                     await voting.delete()
+                    game_running = False
                     return
 
         thumbs_up = 1
@@ -163,12 +179,18 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
 
     @bot.command()
     async def guess(ctx, guessed_location: str):
-        if ctx.author != global_spy:
-            await ctx.send("You're not the spy.")
-        else:
+        global game_running
+        if game_running == False:
+          return
+
+        if ctx.author == global_spy:
             if guessed_location.lower() != location.lower():
                 await ctx.send(f"**{guessed_location} is not right!** The real location was {location}. The crew wins!")
+                game_running = False
+                return
             else:
                 await ctx.send(f"**{guessed_location} is right!** The spy wins!")
+                game_running = False
+                return
 
 bot.run(DISCORD_TOKEN)
