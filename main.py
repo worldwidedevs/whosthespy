@@ -31,12 +31,12 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     global thumbs_down
 
     locations = [
-        ["Restaurant","Barkeeper","Guest","Waiter","Chef","Gourmet/Tester",""],
-        ["Casino","Groupier","Kunde","Escord Lady","Manager","Receptionist","Ferrari Owner who just wants to flex"],
-        ["Beach","Thief","Icecream Seller","Tourist","Lifeguard","Surfteacher",""], 
-        ["Luxury Yacht","Passanger","Captain","Cook","Cleaning Crew Member","Receptionist",""],
-        ["Submarine","Captain","Sailor","Security Guard","Weapons Manager","Cook",""],
-        ["University","Tutor","Student","Librarian","Visitor","Receptionist",""]
+        ["Restaurant","https://i.ibb.co/0qkC1Zm/restaurant-wts.jpg","Barkeeper","Guest","Waiter","Chef","Gourmet/Tester",""],
+        ["Casino","https://i.ibb.co/7r4DZzR/casino-wts.jpg","Groupier","Kunde","Escord Lady","Manager","Receptionist","Ferrari Owner who just wants to flex"],
+        ["Beach","https://i.ibb.co/j645RYh/beach-wts.jpg","Thief","Icecream Seller","Tourist","Lifeguard","Surfteacher",""], 
+        ["Luxury Yacht","https://i.ibb.co/3YqN28b/yacht-wts.jpg","Passanger","Captain","Cook","Cleaning Crew Member","Receptionist",""],
+        ["Submarine","https://i.ibb.co/rvmhDGv/submarine-wts.jpg","Captain","Sailor","Security Guard","Weapons Manager","Cook",""],
+        ["University","https://i.ibb.co/Bgj2HgH/university-wts.jpg","Tutor","Student","Librarian","Visitor","Receptionist",""]
     ]
     
     text = ""
@@ -63,13 +63,15 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     if member_count > 10:
         await ctx.send("The maximum amount of players is 10.")
         return
-    elif member_count < 4:
-        await ctx.send("The minimum amount of players is 4.")
+    #elif member_count < 4:
+    #    await ctx.send("The minimum amount of players is 4.")
     
     # Rollen + Locations randomizen (spy etc)
     roleset = random.choice(locations)
     location = roleset[0]
     roleset.remove(location)
+    image = roleset[0]
+    roleset.remove(image)
     spy = random.randint(0,member_count-1)
 
     # Direct messages to members
@@ -89,6 +91,7 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
                 roleset.remove(role)
                 channel = await member.create_dm()
                 embed=discord.Embed(title="Who's the Spy?", description="A new game has started! Here's your role:", color=0xffe600)
+                embed.set_thumbnail(url=image)
                 embed.add_field(name="Location", value=location, inline=True)
                 embed.add_field(name="Role", value=role, inline=True)
                 embed.set_footer(text="Type .vote [user] in the server channel where you started the game to vote out the spy.")
@@ -156,10 +159,16 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
 
         thumbs_up = 1
         thumbs_down = 1
-        print(f"thumbs_up: {thumbs_up}")
-        print(f"thumbs_down: {thumbs_down}")
-        print(f"member_count: {member_count}")
         return
 
+    @bot.command()
+    async def guess(ctx, guessed_location: str):
+        if ctx.author != global_spy:
+            await ctx.send("You're not the spy.")
+        else:
+            if guessed_location.lower() != location.lower():
+                await ctx.send(f"**{guessed_location} is not right!** The real location was {location}. The crew wins!")
+            else:
+                await ctx.send(f"**{guessed_location} is right!** The spy wins!")
 
 bot.run(DISCORD_TOKEN)
