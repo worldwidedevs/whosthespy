@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
+#from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 import random
 import os
 from dotenv import load_dotenv
 from time import sleep
 import typing
 from replit import db
+import logging
 
 # https://github.com/eunwoo1104/discord-py-slash-command
 # https://discordpy.readthedocs.io/en/latest/index.html
@@ -15,7 +16,24 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
-slash = SlashCommand(bot)
+#slash = SlashCommand(bot)
+
+logging.basicConfig(filename="logs/bot.log", filemode="w", format="%(asctime)s - [%(levelname)s] %(name)s : %(message)s", datefmt="%H:%M:%S")
+
+'''
+db[channel_id+".spy"] = ""
+db[channel_id+".thumbsup"] = ""
+db[channel_id+".thumbsdown"] = ""
+db[channel_id+".gamerunning"] = True
+db[channel_id+".location"] = ""
+db[channel_id+".membercount"] = ""
+
+logging.debug("This is a debug message")
+logging.info("This is an info message")
+logging.warning("This is a warning message")
+logging.error("This is an error message")
+logging.critical("This is a critical message")
+'''
 
 def delkeys(channel_id):
     try:
@@ -29,10 +47,6 @@ def delkeys(channel_id):
     except:
         return False
 
-#global_spy = None
-#thumbs_up = 1
-#thumbs_down = 1
-#game_running = False
 
 @bot.event
 async def on_ready():
@@ -41,11 +55,22 @@ async def on_ready():
         if db["startup_checksum"] == True:
             del db["startup_checksum"]
             print("Database working")
+
+            if db.keys():
+                try:
+                    for key in db.keys():
+                        del db[key]
+                    print("Deleted Database keys")
+                except:
+                    print("Failed to delete Database keys")
+                    logging.error("Failed to delete Database keys while starting")
         else:
             del db["startup_checksum"]
             print("Database error")
+            logging.error("Database error while starting")
     except:
         print("Fatal Database error")
+        logging.critical("Fatal Database error while starting")
     finally:
         print("------")
 
@@ -65,22 +90,11 @@ async def on_ready():
     print("Bot is in " + str(guild_count) + " guilds")
     print("------")
     print("Startup complete!")
+    logging.info("Bot started successfully")
 
 @bot.command(aliases=["start", "startgame", "play"], pass_context=True)
 async def start_game(ctx, wait: typing.Optional[int] = None):
-    #global global_spy
-    #global thumbs_up
-    #global thumbs_down
-    #global game_running
-
     channel_id = str(ctx.channel.id)
-
-    #db[channel_id+".spy"] = ""
-    #db[channel_id+".thumbsup"] = ""
-    #db[channel_id+".thumbsdown"] = ""
-    #db[channel_id+".gamerunning"] = True
-    #db[channel_id+".location"] = ""
-    #db[channel_id+".membercount"] = ""
 
     try:
         if db[channel_id+".gamerunning"] == True:
@@ -119,8 +133,10 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
     member_count = len(voice_members)
     db[channel_id+".membercount"] = member_count
 
-    if member_count > 6:
-        await ctx.send("The maximum amount of players is 6.")
+
+    max_players = len(locations[0])-2
+    if member_count > max_players:
+        await ctx.send(f"The maximum amount of players is {max_players}.")
         return
     #elif member_count < 4:
     #    await ctx.send("The minimum amount of players is 4.")
@@ -139,13 +155,13 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
         try:
             if voice_members.index(member) == spy:
                 channel = await member.create_dm()
-                db[channel_id+".spy"] = member
                 embed=discord.Embed(title="Who's the Spy?", description="A new game has started! Here's your role:", color=0xffe600)
                 embed.add_field(name="Location", value="Find it out", inline=True)
                 embed.add_field(name="Role", value="Spy", inline=True)
                 embed.add_field(name="Possible locations", value=text, inline=False)
                 embed.set_footer(text="Type .guess [location] in the server channel where you started the game to guess the location.")
                 await channel.send(embed=embed)
+                db[channel_id+".spy"] = member
             else:
                 role = random.choice(roleset)
                 roleset.remove(role)
@@ -156,8 +172,9 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
                 embed.add_field(name="Role", value=role, inline=True)
                 embed.set_footer(text="Type .vote [user] in the server channel where you started the game to vote out the spy.")
                 await channel.send(embed=embed)
-        except:
+        except Exception as exception:
             await ctx.send("The DM couldn't be sent to everyone. Check if someone blocked the bot.")
+            logging.error(f"Exception while sending DMs - {exception}")
             return
         
     if wait != None:
@@ -170,10 +187,6 @@ async def start_game(ctx, wait: typing.Optional[int] = None):
 
 @bot.command()
 async def vote(ctx):
-    #global global_spy
-    #global thumbs_up
-    #global thumbs_down
-    #global game_running
     channel_id = str(ctx.channel.id)
 
     if db[channel_id+".gamerunning"] == False:
